@@ -31,17 +31,19 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include<stdio.h>
 #include<stdbool.h>
+#include<stdlib.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 typedef enum
 {
-    KEY_CHECK,  	//按键�??测状�??
+    KEY_CHECK,  	//按键�???测状�???
     KEY_COMFIRM,    //按键确认状�??
     KEY_RELEASE     //按键释放状�??
-}keyState_e;        //状�?�枚举变�??
+}keyState_e;        //状�?�枚举变�???
 
 typedef struct
 {
@@ -81,8 +83,12 @@ void Error_Handler(void);
 #define LED_2_GPIO_Port GPIOE
 #define LED_3_Pin GPIO_PIN_15
 #define LED_3_GPIO_Port GPIOE
+#define RS485_DE_Pin GPIO_PIN_7
+#define RS485_DE_GPIO_Port GPIOD
 /* USER CODE BEGIN Private defines */
 #define KEY_GPIO_Port GPIOE
+#define RS485_TX_EN			HAL_GPIO_WritePin(RS485_DE_GPIO_Port, RS485_DE_Pin, GPIO_PIN_SET)
+#define RS485_RX_EN			HAL_GPIO_WritePin(RS485_DE_GPIO_Port, RS485_DE_Pin, GPIO_PIN_RESET)
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
