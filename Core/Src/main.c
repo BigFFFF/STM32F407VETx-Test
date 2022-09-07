@@ -22,11 +22,10 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
-#include "filter.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "filter.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,8 +35,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define PWM_PULSE_MAX 500
-#define PWM_PULSE_MIN 0
+#define ADC_DATA_MAX	10
+#define KEY_MAX 		3
+#define PWM_PULSE_MAX 	500
+#define PWM_PULSE_MIN 	0
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,13 +49,17 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-KEY_STATE_T Key[3] = {{.keyState = KEY_CHECK, .keyFlag = false, .keyPin = KEY_1_Pin},
-					  {.keyState = KEY_CHECK, .keyFlag = false, .keyPin = KEY_2_Pin},
-					  {.keyState = KEY_CHECK, .keyFlag = false, .keyPin = KEY_3_Pin}};
+KEY_STATE_T Key[KEY_MAX] = {{.keyState = KEY_CHECK, .keyFlag = false, .keyPin = KEY_1_Pin},
+					  	  	{.keyState = KEY_CHECK, .keyFlag = false, .keyPin = KEY_2_Pin},
+							{.keyState = KEY_CHECK, .keyFlag = false, .keyPin = KEY_3_Pin}};
+
 uint16_t led_1_pwm_pulse = 0;
-int ADC_Value = 0;
-int ADC_Filter = 0;
-int LED_NUM = 0;
+int ADC_SINGLE[CH_MAX] = {0};
+int ADC_DATA[CH_MAX][ADC_DATA_MAX] = {0};
+int ADC_Value[CH_MAX] = {0};
+int ADC_Filter[CH_MAX] = {0};
+int LED_NUM[CH_MAX] = {0};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,6 +69,8 @@ static void led_1_pwm(void);
 static void led_2_pwm(void);
 static void key_scan(void);
 static void key_get(void);
+static void adc_scan(void);
+static void adc_filter(int ch_num, uint32_t avg);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -195,7 +202,7 @@ static void led_1_pwm() {
 	TIM1->CCR3 = led_1_pwm_pulse;
 }
 
-//LED_2改变亮度�????3挡可调）
+//LED_2改变亮度�????????3挡可调）
 static void led_2_pwm() {
 	static uint16_t pwm_pulse;
 	pwm_pulse += (pwm_pulse != PWM_PULSE_MAX ? (PWM_PULSE_MAX * 0.25) : (-PWM_PULSE_MAX));
@@ -233,7 +240,7 @@ static void key_scan() {
 
 //执行按键操作
 static void key_get() {
-	//key_1触发|LED_1�????�????
+	//key_1触发|LED_1�????????�????????
 	if (Key[0].keyFlag == true) {
 		Key[0].keyFlag = false;
 		static bool led_1_state;
@@ -244,49 +251,75 @@ static void key_get() {
 			led_1_state = (HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_3) == HAL_OK ? false : true);
 		}
 	}
-	//key_2触发|LED_2�????�????
+	//key_2触发|LED_2�????????�????????
 	else if (Key[1].keyFlag == true) {
 		Key[1].keyFlag = false;
 		led_2_pwm();
 	}
-	//key_3触发|LED_3�????�????
+	//key_3触发|LED_3�????????�????????
 	else if (Key[2].keyFlag == true) {
 		Key[2].keyFlag = false;
 		HAL_GPIO_TogglePin(LED_3_GPIO_Port, LED_3_Pin);
 	}
 }
 
-//定时器终端回调
+//定时器终端回�????
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	//100Hz
 	if (htim->Instance == TIM10) {
 		key_scan();
-		HAL_ADC_Start_IT(&hadc1);
 	}
 	//500Hz
 	if (htim->Instance == TIM11) {
 		led_1_pwm();
+		//更改定时器时，需要更改filter计数器
+		adc_scan();
 	}
 }
 
-//ADC终端回调
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)    //ADC转换完成回调
-{
-    HAL_ADC_Stop_IT(&hadc1);
-    HAL_TIM_Base_Stop_IT(&htim11);
+//ADC多通道轮询及转换
+static void adc_scan() {
+	static uint16_t data_num[CH_MAX];
+	static uint16_t data_sum[CH_MAX];
+	static uint16_t data_max[CH_MAX] = {V_MIN};
+	static uint16_t data_min[CH_MAX] = {V_MAX};
 
-    //ADC值的获取与转换
-    ADC_Value = HAL_ADC_GetValue(&hadc1);
-    ch3.adc_x = ADC_Value;
-    ADC_Filter = filter_x(&ch3, V_SINGE);
-    led3.adc_x = ADC_Filter;
-    LED_NUM = filter_led(&led3, V_SINGE);
-    printf("ADC_Value:%d, ADC_Filter_Value:%d, LED_NUM:%d\r\n", ADC_Value, ADC_Filter, LED_NUM);
+	HAL_TIM_Base_Stop_IT(&htim10);
 
-    HAL_TIM_Base_Start_IT(&htim11);
+	//轮询通道获取ADC值
+	for (int ch_num = 0; ch_num < CH_MAX; ch_num++) {
+		HAL_ADC_Start(&hadc1);
+		HAL_ADC_PollForConversion(&hadc1,50);
+		ADC_SINGLE[ch_num] = HAL_ADC_GetValue(&hadc1);
+		data_max[ch_num] = (data_max[ch_num] > ADC_SINGLE[ch_num] ? data_max[ch_num] : ADC_SINGLE[ch_num]);
+		data_min[ch_num] = (data_min[ch_num] < ADC_SINGLE[ch_num] ? data_min[ch_num] : ADC_SINGLE[ch_num]);
+		ADC_DATA[ch_num][data_num[ch_num]] = ADC_SINGLE[ch_num];
+		data_sum[ch_num] += ADC_DATA[ch_num][data_num[ch_num]];
+		data_num[ch_num]++;
+		//当数组满时，去极值求均值滤波
+		if (data_num[ch_num] == ADC_DATA_MAX) {
+			data_sum[ch_num] -= (data_max[ch_num] + data_min[ch_num]);
+			//右移三位求均值
+			adc_filter(ch_num, data_sum[ch_num] >> 3);
+			data_sum[ch_num] = 0;
+			data_max[ch_num] = V_MIN;
+			data_min[ch_num] = V_MAX;
+			data_num[ch_num] = 0;
+		}
+	}
+	HAL_TIM_Base_Start_IT(&htim10);
 }
 
+//ADCtoLED过滤
+static void adc_filter(int ch_num, uint32_t avg) {
+    ADC_Value[ch_num] = avg;
+    ch[ch_num].adc_x = ADC_Value[ch_num];
+    ADC_Filter[ch_num] = filter_x(&ch[ch_num], V_SINGE);
+    led[ch_num].adc_x = ADC_Filter[ch_num];
+    LED_NUM[ch_num] = filter_led(&led[ch_num], V_SINGE);
+    //printf("CH:%d, ADC_Value:%d, ADC_Filter_Value:%d, LED_NUM:%d\r\n", ch_num, ADC_Value[ch_num], ADC_Filter[ch_num], LED_NUM[ch_num]);
+}
 /* USER CODE END 4 */
 
 /**

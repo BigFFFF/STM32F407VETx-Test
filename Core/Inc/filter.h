@@ -21,6 +21,7 @@ extern "C" {
 #define A_MAX		3000			//电流最大值
 #define A_MIN		0				//电压最小值
 #define A_SINGE		((V_MAX)/(100))	//电流最小分度值
+#define CH_MAX 		2				//通道最大值
 
 typedef struct {
 	int adc_x;		//新进的值
@@ -28,16 +29,17 @@ typedef struct {
 	int old;		//前一个值
 	int sum;		//累加值
 	int differe;	//新旧差值
+	int count;		//计数校准
 }Filter_ch, * pFilter_ch;
 
 typedef struct {
 	int adc_x;		//新进的值
-	int old;		//前一个值
+	int old;		//前一个LED值
 	div_t output;	//除数值(余和商)
 }Filter_led, * pFilter_led;
 
-extern Filter_ch ch3;
-extern Filter_led led3;
+extern Filter_ch ch[];
+extern Filter_led led[];
 
 /***************************
 ADC一次滤波(limit_x)
@@ -49,6 +51,7 @@ typedef struct {
 	int old;		//前一个值
 	int sum;		//累加值
 	int differe;	//新旧差值
+	int count;		//计数校准
 }Filter_ch, * pFilter_ch;
 
 int limit_x 		//单个LED显示的电压值分度值
@@ -59,7 +62,6 @@ int					//单个电压/电流值（V_MIN-V_MAX）/（A_MIN-A_MAX）
 int filter_x(pFilter_ch ch, int limit_x);
 
 /***************************
-作用：
 ADC二次隔值滤波(limit_x)
 
 参数：
