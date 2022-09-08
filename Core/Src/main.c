@@ -202,7 +202,7 @@ static void led_1_pwm() {
 	TIM1->CCR3 = led_1_pwm_pulse;
 }
 
-//LED_2改变亮度�????????3挡可调）
+//LED_2改变亮度�?????????3挡可调）
 static void led_2_pwm() {
 	static uint16_t pwm_pulse;
 	pwm_pulse += (pwm_pulse != PWM_PULSE_MAX ? (PWM_PULSE_MAX * 0.25) : (-PWM_PULSE_MAX));
@@ -240,7 +240,7 @@ static void key_scan() {
 
 //执行按键操作
 static void key_get() {
-	//key_1触发|LED_1�????????�????????
+	//key_1触发|LED_1�?????????�?????????
 	if (Key[0].keyFlag == true) {
 		Key[0].keyFlag = false;
 		static bool led_1_state;
@@ -251,34 +251,34 @@ static void key_get() {
 			led_1_state = (HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_3) == HAL_OK ? false : true);
 		}
 	}
-	//key_2触发|LED_2�????????�????????
+	//key_2触发|LED_2�?????????�?????????
 	else if (Key[1].keyFlag == true) {
 		Key[1].keyFlag = false;
 		led_2_pwm();
 	}
-	//key_3触发|LED_3�????????�????????
+	//key_3触发|LED_3�?????????�?????????
 	else if (Key[2].keyFlag == true) {
 		Key[2].keyFlag = false;
 		HAL_GPIO_TogglePin(LED_3_GPIO_Port, LED_3_Pin);
 	}
 }
 
-//定时器终端回�????
+//定时器终端回�?????
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	//100Hz
 	if (htim->Instance == TIM10) {
 		key_scan();
+		//更改定时器时，需要更改adc_scan定时器开关号和filter计数�?
+		adc_scan();
 	}
 	//500Hz
 	if (htim->Instance == TIM11) {
 		led_1_pwm();
-		//更改定时器时，需要更改filter计数器
-		adc_scan();
 	}
 }
 
-//ADC多通道轮询及转换
+//ADC多�?�道轮询及转�?
 static void adc_scan() {
 	static uint16_t data_num[CH_MAX];
 	static uint16_t data_sum[CH_MAX];
@@ -287,7 +287,7 @@ static void adc_scan() {
 
 	HAL_TIM_Base_Stop_IT(&htim10);
 
-	//轮询通道获取ADC值
+	//轮询通道获取ADC�?
 	for (int ch_num = 0; ch_num < CH_MAX; ch_num++) {
 		HAL_ADC_Start(&hadc1);
 		HAL_ADC_PollForConversion(&hadc1,50);
@@ -297,10 +297,10 @@ static void adc_scan() {
 		ADC_DATA[ch_num][data_num[ch_num]] = ADC_SINGLE[ch_num];
 		data_sum[ch_num] += ADC_DATA[ch_num][data_num[ch_num]];
 		data_num[ch_num]++;
-		//当数组满时，去极值求均值滤波
+		//当数组满时，去极值求均�?�滤�?
 		if (data_num[ch_num] == ADC_DATA_MAX) {
 			data_sum[ch_num] -= (data_max[ch_num] + data_min[ch_num]);
-			//右移三位求均值
+			//右移三位求均�?
 			adc_filter(ch_num, data_sum[ch_num] >> 3);
 			data_sum[ch_num] = 0;
 			data_max[ch_num] = V_MIN;

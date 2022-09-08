@@ -21,7 +21,7 @@ extern "C" {
 #define A_MAX		3000			//电流最大值
 #define A_MIN		0				//电压最小值
 #define A_SINGE		((V_MAX)/(100))	//电流最小分度值
-#define CH_MAX 		2				//通道最大值
+#define CH_MAX 		3				//通道最大值
 
 typedef struct {
 	int adc_x;		//新进的值

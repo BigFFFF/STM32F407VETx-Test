@@ -47,9 +47,10 @@ int filter_x(pFilter_ch ch, int limit_x) {
 		ch->count = 0;
 		return ch->first;
 	}
-	//累积50次不变时，滞后平均滤波(根据采集频率而定)
+
+	//累积10次不变时,且变化幅度超过limit_x的一半时，滞后平均滤波(根据采集频率而定)
 	ch->count++;
-	if (ch->count > 50) {
+	if ((ch->count > 10) && ((ch->adc_x - ch->first) > (limit_x >> 1) || (ch->adc_x - ch->first) < -(limit_x >> 1))) {
 		ch->first = (ch->adc_x + ch->first) >> 1;
 		ch->sum = 0;
 		ch->count = 0;
@@ -77,10 +78,12 @@ int 				//LED个数(0-100）
 ***************************/
 int filter_led(pFilter_led led, int limit_x) {
 	led->output = div(led->adc_x, limit_x);
-	if (led->output.rem > (limit_x - (limit_x >> 2))) {
+
+	//五舍五入
+	if (led->output.rem > (limit_x >> 1)) {
 		led->old = led->output.quot + 1;
 	}
-	else if (led->output.rem < (limit_x >> 2)) {
+	else if (led->output.rem < (limit_x >> 1)) {
 		led->old = led->output.quot;
 	}
 	return led->old;

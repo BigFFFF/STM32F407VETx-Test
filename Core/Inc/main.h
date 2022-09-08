@@ -40,10 +40,10 @@ extern "C" {
 /* USER CODE BEGIN ET */
 typedef enum
 {
-    KEY_CHECK,  	//按键�????测状�????
+    KEY_CHECK,  	//按键�?????测状�?????
     KEY_COMFIRM,    //按键确认状�??
     KEY_RELEASE     //按键释放状�??
-}keyState_e;        //状�?�枚举变�????
+}keyState_e;        //状�?�枚举变�?????
 
 typedef struct
 {
