@@ -25,11 +25,8 @@ extern "C" {
 
 typedef struct {
 	int adc_x;		//新进的值
-	int first;		//最早的值
-	int old;		//前一个值
-	int sum;		//累加值
-	int differe;	//新旧差值
-	int count;		//计数校准
+	int old_x;		//目前的值
+	int diff_x;		//变化前差值
 }Filter_ch, * pFilter_ch;
 
 typedef struct {
@@ -47,11 +44,8 @@ ADC一次滤波(limit_x)
 pFilter_ch ch		//单个通道保存电压值的结构体指针
 typedef struct {
 	int adc_x;		//新进的值
-	int first;		//最早的值
-	int old;		//前一个值
-	int sum;		//累加值
-	int differe;	//新旧差值
-	int count;		//计数校准
+	int old_x;		//目前的值
+	int diff_x;		//变化前差值
 }Filter_ch, * pFilter_ch;
 
 int limit_x 		//单个LED显示的电压值分度值
